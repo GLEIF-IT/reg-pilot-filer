@@ -5,6 +5,8 @@
 ### Added
 
 - **Environment Variables**:
+  - `KERI_BASER_MAP_SIZE`: Defines the maximum size of the LMDB database. Defaults to `104857600` (100 MB).
+  - `FILER_CHUNK_SIZE`: Defines the size of the chunks used for file processing. This allows fine-tuning of memory usage when handling large files.
   - `VLEI_VERIFIER`: Base URL of the Vlei Verifier.
 
 - **Automatic LMDB Cleanup**: 

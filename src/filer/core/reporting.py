@@ -443,7 +443,7 @@ class ReportVerifier(doing.Doer):
                                 fullPath = FileProcessor.find_file(file_name, tempDir)
                                 signed.append(os.path.basename(fullPath))
                                 if sig_aid != submitter:
-                                    raise kering.ValidationError(f"signature from {sig_aid} does not match submitter {submitter}")
+                                    raise kering.ValidationError(f"signature from {submitter} does not match the report signer {sig_aid}")
 
                                 dig = signature["digest"]
                                 non_prefixed_dig = DigerBuilder.get_non_prefixed_digest(dig)
@@ -460,7 +460,7 @@ class ReportVerifier(doing.Doer):
                             diff = set(files) - set(verfed)
                             if len(diff) == 0:
                                 msg = f"All {len(files)} files in report package, submitted by {stats.submitter}, have been signed by " \
-                                      f"known AIDs."
+                                      f"known AIDs"
                                 changes.append((said, ReportStatus.verified, msg))
                                 logger.info(f"Added verified status message {msg}")
                             else:
