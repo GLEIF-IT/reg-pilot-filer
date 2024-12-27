@@ -1,0 +1,52 @@
+services:
+  # witnesses:
+  #   # container_name: witnesshost
+  #   # hostname: witnesshost
+  #   image: weboftrust/keri:latest
+  #   platform: linux/amd64
+  #   tty: true
+  #   volumes:
+  #     - ./scripts/keri/cf/main/:/keripy/scripts/keri/cf/main/
+  #   ports:
+  #       - 5642:5642  # witness
+  #       - 5643:5643  # witness
+  #       - 5644:5644  # witness
+  #   entrypoint: kli witness demo
+
+  # vlei:
+  #   image: gleif/vlei:latest
+  #   container_name: vlei
+  #   hostname: vlei
+  #   ports:
+  #     - 7723:7723
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - PYTHONIOENCODING=UTF-8
+  #   entrypoint: [ "vLEI-server", "-s", "./schema/acdc", "-c" , "./samples/acdc/", "-o", "./samples/oobis/" ]
+
+  reg-pilot-filer:
+    build:
+      context: .
+      dockerfile: images/reg-pilot-filer.dockerfile
+    image: gleif/reg-pilot-filer:latest
+    container_name: reg-pilot-filer
+    hostname: reg-pilot-filer
+    ports:
+      - 7878:7878
+    healthcheck:
+      test:
+          - CMD
+          - curl
+          - -f
+          - http://localhost:7676/health
+      interval: 2s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
+
+  deps:
+    image: alpine
+    command: ['echo', 'Dependencies running']
+    depends_on:
+        reg-pilot-filer:
+            condition: service_healthy
