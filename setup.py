@@ -33,7 +33,7 @@ from setuptools import setup
 
 setup(
     name='reg-pilot-filer',
-    version='0.0.1',  # also change in src/filer/__init__.py
+    version='0.0.2',  # also change in src/filer/__init__.py
     license='Apache Software License 2.0',
     description='Reg Pilot Filer',
     long_description="Reg Pilot Filer",

@@ -16,6 +16,7 @@ from keri import kering
 from keri.core import Siger
 
 from filer.core.basing import delete_upload_status, ReportStats, ReportStatus, save_upload_status, UploadStatus
+from filer.core.resolve_env import FilerEnvironment
 from filer.core.utils import DigerBuilder, verify_signature, check_login
 
 # help.ogler.level = logging.getLevelName("DEBUG")
@@ -64,6 +65,8 @@ def loadEnds(app, fdb, filer):
     app.add_route("/reports/{aid}/{dig}", reportEnd)
     healthEnd = HealthEndpoint()
     app.add_route("/health", healthEnd)
+    reportStatusEnd = ReportStatusResourceEnd(fdb, filer)
+    app.add_route("/reports/status/{aid}/{lei}", reportStatusEnd)
 
 
 class Filer:
@@ -82,7 +85,7 @@ class Filer:
         self.fdb = fdb
         logger.info("Report status filer initialized")
 
-    def create(self, aid: str, dig: str, filename: str, typ: str, stream):
+    def create(self, aid: str, dig: str, lei: str, filename: str, typ: str, stream):
         """ Create a new file upload with initial Accepted status.
 
         This method creates the report upload status object and queues it for report verification processing
@@ -90,6 +93,7 @@ class Filer:
         Parameters:
             aid (str): qb64 AID of uploader
             dig (str): qb64 digest of report content
+            lei (str): lei of report submitter
             filename (str): filename reported from multipart/form filename field
             typ (str): content-type of file upload
             stream (File): file like stream object to load the report data from
@@ -100,6 +104,7 @@ class Filer:
             filename=filename,
             status=ReportStatus.accepted,
             contentType=typ,
+            lei=lei,
             size=0
         )
         chunk_size = os.getenv("FILER_CHUNK_SIZE", 4194304)
@@ -172,6 +177,17 @@ class Filer:
         diger = DigerBuilder.sha256(dig)
         return self.fdb.stats.get(keys=(diger.qb64,))
 
+    def adminGetStatuses(self, lei=None):
+        """ Generator that yields image data in 4k chunks for identifier
+
+        Parameters:
+            lei (str): LEI to filter uploads by
+
+        """
+        statuses = [x[1] for x in self.fdb.stats.getItemIter()]
+        result = statuses if not lei else filter(lambda x: x.lei == lei, statuses)
+        return result
+
     def getData(self, dig):
         """ Generator that yields image data in 4k chunks for identifier
 
@@ -232,6 +248,76 @@ class Filer:
         self.fdb.stats.pin(keys=(said,), val=stats)
 
 
+class ReportStatusResourceEnd:
+    """ Report status resource endpoint capable of retrieving all report statuses or all report statuses by LEI
+
+    """
+
+    def __init__(self, fdb, filer):
+        """ Create new report status resource endpoint instance
+
+        Parameters:
+            fdb (FilerBaser): filer database environment
+            filer (Filer): report status filer
+
+        """
+        self.fdb = fdb
+        self.filer = filer
+        self.env = FilerEnvironment.resolve_env()
+
+    def on_get(self, _, rep, aid, lei=None):
+        """  Report Resource GET Method
+
+        Parameters:
+            _: falcon.Request HTTP request
+            rep: falcon.Response HTTP response
+            aid: AID of requestor
+            lei: [Optional] - If provided returns statuses of all reports for this LEI
+
+        ---
+         summary: Retriever file upload status.
+         description: Returns current statuses for previous submitted reports
+         tags:
+            - Reports
+         parameters:
+           - in: path
+             name: aid
+             schema:
+                type: string
+             description: qb64 AID of submitter
+           - in: path
+             name: lei
+             schema:
+                type: string
+             description: LEI
+         responses:
+           200:
+              description: Aid is authorized as a Data Administrator
+           401:
+              description: Aid is not authorized as a Data Administrator
+
+        """
+        try:
+            check_login_response = check_login(aid)
+        except Exception as e:
+            raise falcon.HTTPInternalServerError(description=f"Error retrieving report status: {e}")
+        if check_login_response.status_code != 200:
+            response_json = check_login_response.json()
+            raise falcon.HTTPUnauthorized(description=response_json["msg"])
+        else:
+            response_json = check_login_response.json()
+            if (cred_lei := response_json.get("lei", "")) != self.env.admin_lei:
+                raise falcon.HTTPUnauthorized(
+                    description=f"Aid {aid} not authorized as a Data Administrator. Credential lei `{cred_lei}` doesn't match the expected admin LEI `{self.env.admin_lei}`")
+            elif (cred_role := response_json.get("role", "")) != self.env.admin_role_name:
+                raise falcon.HTTPUnauthorized(
+                    description=f"Aid {aid} not authorized as a Data Administrator. Credential role `{cred_role}` doesn't match the expected admin role `{self.env.admin_role_name}`")
+            else:
+                stats = self.filer.adminGetStatuses(lei)
+                rep.status = falcon.HTTP_200
+                rep.data = json.dumps([asdict(x) for x in stats]).encode("utf-8")
+
+
 class ReportResourceEnd:
     """ Report resource endpoint capable of creating and retrieving report instances
 
@@ -290,11 +376,6 @@ class ReportResourceEnd:
         if stats is None:
             raise falcon.HTTPNotFound(description=f"report {dig} not found")
 
-        # sacct = self.fdb.accts.get(keys=(stats.submitter,))
-        # if acct.lei != sacct.lei:
-        #     raise falcon.HTTPNotFound(
-        #         description=f"report {dig} LEI {sacct.lei} not available to this user LEI {acct.lei}")
-
         rep.status = falcon.HTTP_200
         rep.data = json.dumps(asdict(stats)).encode("utf-8")
 
@@ -334,7 +415,8 @@ class ReportResourceEnd:
         if check_login_response.status_code != 200:
             response_json = check_login_response.json()
             raise falcon.HTTPUnauthorized(description=response_json["msg"])
-
+        response_json = check_login_response.json()
+        lei = response_json.get("lei")
         form = req.get_media()
         upload = False
         for part in form:
@@ -343,7 +425,7 @@ class ReportResourceEnd:
                 try:
                     logger.info(f"Upload passed AID checks, Creating filer  {part.filename}:\n "
                                 f"\tType={part.content_type}\n")
-                    self.filer.create(aid=aid, dig=dig, filename=part.secure_filename,
+                    self.filer.create(aid=aid, dig=dig, lei=lei, filename=part.secure_filename,
                                       typ=part.content_type,
                                       stream=part.stream)
                     upload = True
@@ -443,7 +525,8 @@ class ReportVerifier(doing.Doer):
                                 fullPath = FileProcessor.find_file(file_name, tempDir)
                                 signed.append(os.path.basename(fullPath))
                                 if sig_aid != submitter:
-                                    raise kering.ValidationError(f"signature from {submitter} does not match the report signer {sig_aid}")
+                                    raise kering.ValidationError(
+                                        f"signature from {submitter} does not match the report signer {sig_aid}")
 
                                 dig = signature["digest"]
                                 non_prefixed_dig = DigerBuilder.get_non_prefixed_digest(dig)
