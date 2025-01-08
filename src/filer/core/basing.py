@@ -22,6 +22,7 @@ import datetime
 class ReportStats:
     """ Report statistics dataclass for tracking"""
     submitter: str = None
+    lei: str = None
     filename: str = None
     status: str = None
     contentType: str = None

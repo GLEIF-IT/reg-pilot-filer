@@ -79,11 +79,15 @@ def launch(args):
     help.ogler.level = logging.DEBUG
     filer_mode = os.environ.get("FILER_ENV", "production")
     verifier_base_url = os.environ.get("VLEI_VERIFIER", "http://localhost:7676")
-
+    config = cf.get()
+    admin_role_name = config.get("admin_role_name")
+    admin_lei = config.get("admin_lei")
     ve_init_params = {
         "configuration": cf,
         "mode": filer_mode,
-        "verifier_base_url": verifier_base_url
+        "verifier_base_url": verifier_base_url,
+        "admin_role_name": admin_role_name,
+        "admin_lei": admin_lei,
     }
 
 

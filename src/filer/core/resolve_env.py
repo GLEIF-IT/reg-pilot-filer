@@ -10,6 +10,8 @@ class FilerEnvironment:
     configuration: configing.Configer = None
     mode: str = "production"
     verifier_base_url: str = "localhost:7676"
+    admin_role_name: str = "EBA Data Admin"
+    admin_lei: str = ""
 
 
     _instance: "FilerEnvironment" = None
