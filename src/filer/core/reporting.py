@@ -66,7 +66,7 @@ def loadEnds(app, fdb, filer):
     healthEnd = HealthEndpoint()
     app.add_route("/health", healthEnd)
     reportStatusEnd = ReportStatusResourceEnd(fdb, filer)
-    app.add_route("/reports/status/{aid}/{lei}", reportStatusEnd)
+    app.add_route("/admin/upload_statuses/{aid}/{lei}", reportStatusEnd)
 
 
 class Filer:
