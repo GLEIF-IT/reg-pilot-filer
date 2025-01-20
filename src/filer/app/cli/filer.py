@@ -8,6 +8,7 @@ Command line runner for app
 import multicommand
 import logging
 from keri import help
+from filer import __version__
 
 help.ogler.level = logging.DEBUG
 help.ogler.reopen(name="reg-pilot-filer", temp=True, clear=True)
@@ -21,6 +22,7 @@ from filer.app.cli import commands
 def main():
     """ Command line process for main filer daemon """
     parser = multicommand.create_parser(commands)
+    parser.add_argument('--version', action='version', version=f"%(prog)s {__version__}")
     args = parser.parse_args()
 
     try:

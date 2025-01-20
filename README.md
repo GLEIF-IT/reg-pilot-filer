@@ -3,6 +3,18 @@ The file processor for reg-pilot.
 
 This requires a running Vlei-Verifier service.
 
+# Compatibility Matrix
+
+
+| Service  | Version | Compatible Verifier Versions | Compatible API Versions | Compatible Filer Versions |
+|----------|---------|------------------------------|--------------------------|---------------------------|
+| Verifier | 0.0.3   | -                            | 0.0.2                   | 0.0.1, 0.0.2              |
+| Verifier | 0.0.4   | -                            | 0.0.2                   | 0.0.1, 0.0.2              |
+| API      | 0.0.2   | 0.0.3, 0.0.4                | -                        | 0.0.1, 0.0.2              |
+| Filer    | 0.0.1   | 0.0.3, 0.0.4                | 0.0.2                   | -                         |
+| Filer    | 0.0.2   | 0.0.3, 0.0.4                | 0.0.2                   | -                         |
+
+
 The service can be launched from the command-line with:
 
 ```
