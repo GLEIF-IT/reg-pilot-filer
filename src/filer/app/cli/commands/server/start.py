@@ -14,7 +14,7 @@ from hio.core import http
 from keri import help
 from keri.app import keeping, configing, habbing, oobiing
 from keri.app.cli.common import existing
-from keri.vdr import viring
+import datetime
 import logging
 from filer.core import basing, reporting
 from filer.core.resolve_env import FilerEnvironment
@@ -44,6 +44,29 @@ parser.add_argument('--config-file',
                     action='store',
                     default="dkr",
                     help="configuration filename override")
+
+class RequestResponseLoggerMiddleware:
+    def process_request(self, req, resp):
+        # Log the request details
+        timestamp = datetime.datetime.now().isoformat()
+        method = req.method
+        path = req.path
+
+        print(f"[{timestamp}] Incoming Request: {method} {path}")
+
+    def process_response(self, req, resp, resource, req_succeeded):
+        timestamp = datetime.datetime.now().isoformat()
+        method = req.method
+        path = req.path
+        status = resp.status
+        body = resp.data if resp.data else resp.text
+
+        # Convert body to a JSON string if applicable
+        body_str = body
+
+        print(f"[{timestamp}] Completed Request: {method} {path}")
+        print(f"[{timestamp}] Response Status: {status}")
+        print(f"[{timestamp}] Response Body:\n{body_str}\n")
 
 
 def launch(args):
@@ -100,9 +123,9 @@ def launch(args):
         expose_headers=['cesr-attachment', 'cesr-date', 'content-type']
     )
 
-
+    request_response_logger_middleware = RequestResponseLoggerMiddleware()
     app = falcon.App(
-        middleware=[cors_middleware,])
+        middleware=[cors_middleware, request_response_logger_middleware])
 
     server = http.Server(port=httpPort, app=app)
     httpServerDoer = http.ServerDoer(server=server)
