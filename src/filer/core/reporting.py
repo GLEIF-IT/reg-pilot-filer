@@ -414,7 +414,7 @@ class ReportResourceEnd:
         """
         env = FilerEnvironment.resolve_env()
         vc = VerifierClient(env.verifier_base_url)
-        check_login_response: VerifierResponse = vc.check_login(aid)
+        check_login_response: VerifierResponse = vcli.check_login(aid)
         if check_login_response.code != 200:
             raise falcon.HTTPUnauthorized(description=check_login_response.message)
         else:
