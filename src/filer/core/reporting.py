@@ -298,7 +298,7 @@ class ReportStatusResourceEnd:
         try:
             env = FilerEnvironment.resolve_env()
             vcli = VerifierClient(env.verifier_base_url)
-            check_login_response: VerifierResponse = vc.check_login(aid)
+            check_login_response: VerifierResponse = vcli.check_login(aid)
         except Exception as e:
             raise falcon.HTTPInternalServerError(description=f"Error retrieving report status: {e}")
         if check_login_response.code != 200:
