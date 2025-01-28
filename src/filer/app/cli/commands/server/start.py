@@ -105,12 +105,14 @@ def launch(args):
     config = cf.get()
     admin_role_name = config.get("admin_role_name")
     admin_lei = config.get("admin_lei")
+    allowed_roles = config.get("allowed_roles")
     ve_init_params = {
         "configuration": cf,
         "mode": filer_mode,
         "verifier_base_url": verifier_base_url,
         "admin_role_name": admin_role_name,
         "admin_lei": admin_lei,
+        "allowed_roles": allowed_roles,
     }
 
 

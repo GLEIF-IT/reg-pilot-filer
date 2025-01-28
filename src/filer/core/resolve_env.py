@@ -12,6 +12,7 @@ class FilerEnvironment:
     verifier_base_url: str = "localhost:7676"
     admin_role_name: str = "EBA Data Admin"
     admin_lei: str = ""
+    allowed_roles: list = field(default_factory=lambda: [])
 
 
     _instance: "FilerEnvironment" = None

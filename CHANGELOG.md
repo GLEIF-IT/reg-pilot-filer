@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.1.0] - 2025-01-28
+
+### Added
+
+- **Role Validation Business Logic**:  
+  - The Filer now incorporates role validation, ensuring that users have the correct roles for specific operations.  
+  - Validation logic previously handled by the Verifier has been migrated to the Filer.
+
+- **Integration with `vlei-verifier-client`**:  
+  - Replaced direct requests to the vLEI Verifier with the official [vlei-verifier-client](https://pypi.org/project/vlei-verifier-client/), improving maintainability and abstraction.
+
+
 ## [v0.0.2] - 2025-01-06
 
 ### Added

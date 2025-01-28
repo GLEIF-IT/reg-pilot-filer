@@ -9,18 +9,16 @@ import zipfile
 from dataclasses import asdict
 
 import falcon
-from falcon.media.multipart import MultipartForm
 from keri import help
 from hio.base import doing
 from keri import kering
-from keri.core import Siger
+from utils import VerifierResponse
 
 from filer.core.basing import delete_upload_status, ReportStats, ReportStatus, save_upload_status, UploadStatus
 from filer.core.resolve_env import FilerEnvironment
-from filer.core.utils import DigerBuilder, verify_signature, check_login
+from filer.core.utils import DigerBuilder, verify_signature
+from vlei_verifier_client import VerifierClient, VerifierResponse
 
-# help.ogler.level = logging.getLevelName("DEBUG")
-# logger = help.ogler.getLogger()
 logger = help.ogler.getLogger("ReportVerifier", level=logging.DEBUG)
 
 AID = "aid"
@@ -298,24 +296,25 @@ class ReportStatusResourceEnd:
 
         """
         try:
-            check_login_response = check_login(aid)
+            env = FilerEnvironment.resolve_env()
+            vcli = VerifierClient(env.verifier_base_url)
+            check_login_response: VerifierResponse = vcli.check_login(aid)
         except Exception as e:
             raise falcon.HTTPInternalServerError(description=f"Error retrieving report status: {e}")
-        if check_login_response.status_code != 200:
-            response_json = check_login_response.json()
-            raise falcon.HTTPUnauthorized(description=response_json["msg"])
+        if check_login_response.code != 200:
+            raise falcon.HTTPUnauthorized(description=check_login_response.message)
         else:
-            response_json = check_login_response.json()
+            response_json = check_login_response.body
             if (cred_lei := response_json.get("lei", "")) != self.env.admin_lei:
                 raise falcon.HTTPUnauthorized(
                     description=f"Aid {aid} not authorized as a Data Administrator. Credential lei `{cred_lei}` doesn't match the expected admin LEI `{self.env.admin_lei}`")
             elif (cred_role := response_json.get("role", "")) != self.env.admin_role_name:
                 raise falcon.HTTPUnauthorized(
                     description=f"Aid {aid} not authorized as a Data Administrator. Credential role `{cred_role}` doesn't match the expected admin role `{self.env.admin_role_name}`")
-            else:
-                stats = self.filer.adminGetStatuses(lei)
-                rep.status = falcon.HTTP_200
-                rep.data = json.dumps([asdict(x) for x in stats]).encode("utf-8")
+
+        stats = self.filer.adminGetStatuses(lei)
+        rep.status = falcon.HTTP_200
+        rep.data = json.dumps([asdict(x) for x in stats]).encode("utf-8")
 
 
 class ReportResourceEnd:
@@ -336,6 +335,7 @@ class ReportResourceEnd:
         """
         self.fdb = fdb
         self.filer = filer
+        self.env = FilerEnvironment.resolve_env()
 
     def on_get(self, _, rep, aid, dig):
         """  Report Resource GET Method
@@ -367,10 +367,11 @@ class ReportResourceEnd:
               description: Report successfully uploaded
 
         """
-        check_login_response = check_login(aid)
-        if check_login_response.status_code != 200:
-            response_json = check_login_response.json()
-            raise falcon.HTTPUnauthorized(description=response_json["msg"])
+        env = FilerEnvironment.resolve_env()
+        vcli = VerifierClient(env.verifier_base_url)
+        check_login_response: VerifierResponse = vcli.check_login(aid)
+        if check_login_response.code != 200:
+            raise falcon.HTTPUnauthorized(description=check_login_response.message)
 
         stats = self.filer.get(dig)
         if stats is None:
@@ -411,11 +412,18 @@ class ReportResourceEnd:
               description: Report submission accepted
 
         """
-        check_login_response = check_login(aid)
-        if check_login_response.status_code != 200:
-            response_json = check_login_response.json()
-            raise falcon.HTTPUnauthorized(description=response_json["msg"])
-        response_json = check_login_response.json()
+        env = FilerEnvironment.resolve_env()
+        vcli = VerifierClient(env.verifier_base_url)
+        check_login_response: VerifierResponse = vcli.check_login(aid)
+        if check_login_response.code != 200:
+            raise falcon.HTTPUnauthorized(description=check_login_response.message)
+        else:
+            response_json = check_login_response.body
+            if (cred_role := response_json.get("role", "")) not in self.env.allowed_roles:
+                raise falcon.HTTPUnauthorized(
+                    description=f"{cred_role} is not a valid submitter role")
+
+        response_json = check_login_response.body
         lei = response_json.get("lei")
         form = req.get_media()
         upload = False

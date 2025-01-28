@@ -33,7 +33,7 @@ from setuptools import setup
 
 setup(
     name='reg-pilot-filer',
-    version='0.0.2',  # also change in src/filer/__init__.py
+    version='0.1.0',  # also change in src/filer/__init__.py
     license='Apache Software License 2.0',
     description='Reg Pilot Filer',
     long_description="Reg Pilot Filer",
@@ -82,6 +82,7 @@ setup(
         'dataclasses_json>=0.5.7',
         'apispec>=6.3.0',
         'requests>=2.31.0',
+        'vlei-verifier-client==0.1.0'
     ],
     extras_require={
         # eg:
