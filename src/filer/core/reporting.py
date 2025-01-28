@@ -105,7 +105,7 @@ class Filer:
             lei=lei,
             size=0
         )
-        chunk_size = os.getenv("FILER_CHUNK_SIZE", 4194304)
+        chunk_size = int(os.getenv("FILER_CHUNK_SIZE", "4194304"))
         idx = 0
         diger = DigerBuilder.sha256(dig)
         report = b''
